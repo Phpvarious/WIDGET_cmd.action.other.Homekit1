@@ -1,0 +1,259 @@
+<div class="cmd cmd-widget" data-type="action" data-subtype="other" data-cmd_id="#id#" data-cmd_uid="#uid#" data-version="#version#" data-eqLogic_id="#eqLogic_id#">
+  <!--
+    Base du widget récuperé sur le community :
+      https://community.jeedom.com/t/creation-widget-avec-css/98824
+    Auteur  : PhpVarious
+    Mise à jour   : 09/03/2023
+    Lien          : https://phpvarious.github.io/documentation/widget/fr_FR/action/other/cmd.action.other.homekit1  
+  -->
+  <div class="tuile#id# align-items-center#id#">
+    <span class="iconCmd bg-icone#id# rounded-circle#id# execute"></span>
+    <div class="margin-left#id#">
+      <div class="d-flex#id# align-items-center#id#">
+        <div class="margin-bottom#id# h3-#id#" id="titre#id#"></div>
+      </div>
+      <p class="font-color#id# margin-bottom#id# state#id#"></p>
+    </div>
+  </div>
+  <template>
+    <div>widthTuile : Largueur de la tuile [Défaut : 170]</div>
+    <div>radiusTuile : Arrondi de la tuile [Défaut : 15]</div>
+    <div>titleTuile : Titre du widget [Défaut : le nom de la commande état]</div>
+    <div>texteIfOn : Texte affiché si Etat = 1 [Défaut : Allumé | accepte une valeur vide]</div>
+    <div>texteIfOff : Texte affiché si Etat = 0 [Défaut : Éteint| accepte une valeur vide]</div>
+    <div>radiusIcone : Arrondi de l'icone [Défaut : 50 (rond)]</div>
+    <div>darkBackground : couleur de fond en thème Dark [Défaut : rgb(47, 47, 47)]</div>
+    <div>lightBackground : couleur de fond en thème Light [Défaut : rgb(199 199 199)]</div>
+    <div>darkBackgroundIcone : couleur de fond de l'icone en thème Dark [Défaut : rgb(69, 70, 72)]</div>
+    <div>lightBackgroundIcone : couleur de fond de l'icone en thème Light [Défaut : rgb(100, 100, 100)]</div>
+    <div>icone : icone à afficher dans le widget [ ex : icon jeedomapp-prise ]</div>
+    <div>si ce paramètre n'est pas précisé, le widget affichera l'icône affecté a la commande.</div>
+    <div>et si il n'y a pas d'icône affecté a la commande, le widget affichera un icone prédéfini en fonction du generic type.</div>
+    
+  </template>
+  <script>
+    var debug#id# = ('#debug#' != '#' + 'debug#' && '#debug#' == 1) ? true : false;
+    var fullJs#id# = false
+    var jeedomVersion#id# = 4.4
+    
+    /* Compatibilité V4.2 V4.3 V4.4 */
+    /**/ if(typeof jeeFrontEnd === 'undefined') {
+    /**/   if (debug#id#) console.log('jeeFrontEnd no exist -> version <= 4.2')
+    /**/   jeedomVersion#id# = 4.2
+    /**/ }
+    /**/ else
+    /**/ {
+    /**/   jeedomVersion#id# = jeeFrontEnd.jeedomVersion.substr(0, 3)
+    /**/   if (debug#id#) console.log('jeeFrontEnd -> version == ' + jeedomVersion#id#)
+    /**/ }
+    /**/ if (jeedomVersion#id# >= 4.4) {
+    /**/   fullJs#id# = true
+    /**/   if (debug#id#) console.log('Full Js')
+    /**/ }
+    /**/ if (typeof jeedom.cmd.addUpdateFunction !== 'function') { // a partir de la 4.3
+    /**/   if (debug#id#) console.log('jeedom.cmd.addUpdateFunction no exist')
+    /**/   jeedom.cmd.addUpdateFunction = function(id,func) { jeedom.cmd.update[id]=func; }
+    /**/ }
+    /* ------------------------------------------ */
+    
+    
+    var width#id# = is_numeric('#widthTuile#') ? parseFloat('#widthTuile#'):170;
+    var title#id# = ('#titleTuile#' != '#' + 'titleTuile#') ? "#titleTuile#" : "#valueName#";
+    var radiusIcone#id# = is_numeric('#radiusIcone#') ? parseFloat('#radiusIcone#'):50;
+    var radiusTuile#id# = is_numeric('#radiusTuile#') ? parseFloat('#radiusTuile#'):15;
+    var darkBackground#id# = ('#darkBackground#' != '#' + 'darkBackground#') ? '#darkBackground#' : 'rgb(47, 47, 47)';
+    var lightBackground#id# = ('#lightBackground#' != '#' + 'lightBackground#') ? '#lightBackground#' : 'rgb(199 199 199)';
+    var darkBackgroundIcone#id# = ('#darkBackgroundIcone#' != '#' + 'darkBackgroundIcone#') ? "#darkBackgroundIcone#" : 'rgb(69, 70, 72)';
+    var lightBackgroundIcone#id# = ('#lightBackgroundIcone#' != '#' + 'lightBackgroundIcone#') ? "#lightBackgroundIcone#" : 'rgb(100, 100, 100)';
+    var themeJeedom#id# = "light"
+    
+    if (document.body.hasAttribute('data-theme')) {
+      if (document.body.getAttribute('data-theme').endsWith('Dark')) themeJeedom#id# = "dark";
+    }
+    else if (isset(jeedom.theme.currentTheme)) {
+      if (jeedom.theme.currentTheme.endsWith('Dark')) themeJeedom#id# = "dark";
+    }
+    
+    var icone#id# = ('#icone#' != '#' + 'icone#') ? '<i class="#icone#"></i>' : '#name_display#';
+    var texteIfOn#id# = 'Allumé'
+    var texteIfOff#id# = 'Éteint'
+    
+    if (debug#id#) console.log('┌─────────────────── Chargement Widget (cmd:#id#) en debug')
+    if (debug#id#) console.log('| generictype : #generic_type#');
+    if(icone#id#.indexOf('<i ') === -1) {
+      if (debug#id#) console.log('| icone absent');
+      if (debug#id#) console.log('| name : #name#');
+      if (jeedom.cmd.normalizeName('#name#') == 'off') {
+        if (debug#id#) console.log('| normalizeName : NOT on');
+        if ('#generic_type#'.indexOf('ENERGY') !== -1) icone#id# = '<i class="icon jeedomapp-prise icon_yellow"></i>'
+        else if ('#generic_type#'.indexOf('HEATING') !== -1) icone#id# = '<i class="icon techno-heating3 icon_yellow"></i>'
+        else if ('#generic_type#'.indexOf('MEDIA') !== -1) icone#id# = '<i class="fas fa-tv icon_yellow"></i>'
+        else if ('#generic_type#'.indexOf('LOCK') !== -1) {
+          icone#id# = '<i class="fas fa-lock-open icon_yellow"></i>'
+          texteIfOn#id# = 'Ouvert'
+          texteIfOff#id# = 'Fermé'
+        }
+        else icone#id# = '<i class="fas fa-lightbulb icon_yellow"></i>'
+      } else if (jeedom.cmd.normalizeName('#name#') == 'on') {
+        if (debug#id#) console.log('| normalizeName : on');
+        if ('#generic_type#'.indexOf('ENERGY') !== -1) icone#id# = '<i class="icon jeedomapp-prise"></i>'
+        else if ('#generic_type#'.indexOf('HEATING') !== -1) icone#id# = '<i class="icon techno-heating3"></i>'
+        else if ('#generic_type#'.indexOf('MEDIA') !== -1) icone#id# = '<i class="fas fa-tv"></i>'
+        else if ('#generic_type#'.indexOf('LOCK') !== -1) {
+          icone#id# = '<i class="fas fa-lock"></i>'
+          texteIfOn#id# = 'Ouvert'
+          texteIfOff#id# = 'Fermé'
+        }
+        else icone#id# = '<i class="fas fa-lightbulb"></i>'
+      }
+      else
+      {
+        if (debug#id#) console.log('| Not normalizeName');
+        if ('#generic_type#'.indexOf('ENERGY') !== -1) icone#id# = '<i class="icon jeedomapp-prise icon_orange"></i>'
+        else if ('#generic_type#'.indexOf('HEATING') !== -1) icone#id# = '<i class="icon techno-heating3 icon_orange"></i>'
+        else if ('#generic_type#'.indexOf('MEDIA') !== -1) icone#id# = '<i class="fas fa-tv icon_orange"></i>'
+        else if ('#generic_type#'.indexOf('LOCK') !== -1) {
+          icone#id# = '<i class="fas fa-lock icon_orange"></i>'
+          texteIfOn#id# = 'Ouvert'
+          texteIfOff#id# = 'Fermé'
+        }
+        else icone#id# = '<i class="fas fa-lightbulb icon_orange"></i>'
+      }
+    }
+    if (debug#id#) console.log('| icone : ' + icone#id#);
+    texteIfOn#id# = ('#texteIfOn#' != '#' + 'texteIfOn#') ? "#texteIfOn#" : texteIfOn#id#;
+    texteIfOff#id# = ('#texteIfOff#' != '#' + 'texteIfOff#') ? "#texteIfOff#" : texteIfOff#id#;
+    radiusIcone#id# = radiusIcone#id# > 50 ? 50 : radiusIcone#id#;
+    document.documentElement.style.setProperty('--width#id#', width#id#+'px')
+    document.documentElement.style.setProperty('--border-radius-icone#id#', radiusIcone#id#+'%')  
+    if (debug#id#) console.log('| Thème : ' + themeJeedom#id#);
+    document.documentElement.style.setProperty('--border-radius-tuile#id#', radiusTuile#id#+'px');
+    if (debug#id#) console.log('└───────────────────────────')
+    
+    if (is_object(cmd = document.querySelector('.cmd[data-cmd_uid="#uid#"]'))) {
+      if (jeedom.cmd.normalizeName('#name#') == 'on') cmd.querySelector('.state#id#').innerHTML = texteIfOff#id#
+      if (jeedom.cmd.normalizeName('#name#') == 'off') cmd.querySelector('.state#id#').innerHTML = texteIfOn#id#
+      cmd.querySelector('.iconCmd').innerHTML = icone#id#
+      cmd.querySelector('#titre#id#').innerHTML = title#id#
+    }
+    
+    jeedom.cmd.addUpdateFunction('#id#',function(_options) {
+      if (is_object(cmd = document.querySelector('.cmd[data-cmd_uid="#uid#"]'))) {
+        cmd.setAttribute('title', '{{Date de valeur}} : '+_options.valueDate+'<br/>{{Date de collecte}} : '+_options.collectDate)
+        if (debug#id#) console.log('widget (id:#id#) jeedom.cmd.update [' + jeedom.cmd.normalizeName('#name#') + '] : _options.display_value = ' + _options.display_value)
+        if (_options.display_value == '1' || _options.display_value >= 1 || _options.display_value == '99' || _options.display_value == 99 || _options.display_value == 'on') {
+          if (jeedom.cmd.normalizeName('#name#') == 'on') cmd.style.display = 'none'
+          else cmd.style.display = ''
+        } else {
+          if (jeedom.cmd.normalizeName('#name#') == 'off') cmd.style.display = 'none'
+          else cmd.style.display = ''
+        }
+        
+        
+        
+        if (themeJeedom#id# == 'light') changeTheme#id#()
+        else changeTheme#id#('Dark')
+      }
+    });
+    
+    jeedom.cmd.refreshValue([{ cmd_id: '#id#', display_value: '#state#', valueDate: '#valueDate#', collectDate: '#collectDate#', alertLevel: '#alertLevel#'}])
+    
+    document.querySelector('.cmd[data-cmd_uid=#uid#] .execute').addEventListener('click', function(event) {
+      jeedom.cmd.execute({id: '#id#'})
+    })
+    
+    /*
+    $('.cmd[data-cmd_uid=#uid#] .execute').off().on('click', function() {
+      jeedom.cmd.execute({id: '#id#'})
+    })
+    */
+    
+    /* Changement Thème */
+    function changeTheme#id#(theme='Light'){
+      if (debug#id#) console.log('function changeTheme() : ' + theme)
+      
+      if (theme == 'Light')
+      {
+        if (debug#id#) console.log('widget (id:#id#) : Passage en Light')
+        document.documentElement.style.setProperty('--bg-tuile#id#', lightBackground#id#)
+        document.documentElement.style.setProperty('--bg-icone#id#', lightBackgroundIcone#id#)
+      }
+      else
+      {
+        if (debug#id#) console.log('widget (id:#id#) : Passage en Dark')
+        document.documentElement.style.setProperty('--bg-tuile#id#', darkBackground#id#)
+        document.documentElement.style.setProperty('--bg-icone#id#', darkBackgroundIcone#id#)
+      }
+    }
+    
+    if (fullJs#id#){
+      document.body.addEventListener('changeThemeEvent', function(e) {
+        if (debug#id#) console.log('addEventListener : ' + e.detail.theme)
+        if (e.detail.theme.endsWith('Dark')) changeTheme#id#(e.detail.theme)
+        else changeTheme#id#(e.detail.theme)
+      })
+    } else {
+      $('body').on('changeThemeEvent', function (event, theme) {
+        if (debug#id#) console.log('body on changeThemeEvent : ' + theme)
+        if (theme.endsWith('Dark')) changeTheme#id#('Dark')
+        else changeTheme#id#()
+      })
+    }
+  </script>
+  <style>
+    :root {
+      --width#id#: 170px;
+      --bg-icone#id#: var(--btn-default-color);
+      --border-radius-icone#id# : 50%;
+      --border-radius-tuile#id# : 15px;
+      --bg-tuile#id#: var(--form-bg-color);
+    }
+    .tuile#id# {
+      background-color: var(--bg-tuile#id#);
+      padding: 10px;
+      border-radius: var(--border-radius-tuile#id#);
+      margin-bottom: 0;
+      display: flex;
+      width: var(--width#id#);
+      min-width: 150px;
+    }
+    .rounded-circle#id# {
+      border-radius: var(--border-radius-icone#id#);
+      width: 50px;
+      height: 50px;
+      cursor: pointer !important;
+      text-align: center;
+    }
+    .bg-icone#id# {
+      background-color: var(--bg-icone#id#);
+      
+    }
+    .tuile#id# i:first-child {
+      line-height: 50px;
+      font-size: 24px;
+      color: var(--sc-lightTxt-color);
+    }
+    .margin-left#id# {
+      margin-left: 10px;
+    }
+    .align-items-center#id# {
+      align-items: center;
+    }
+    .d-flex#id# {
+      display: flex;
+    }
+    .margin-bottom#id# {
+      margin-bottom: 0;
+      text-align: left;
+    }
+    .h3-#id# {
+      font-size: 18px;
+      margin-top: 0;
+      line-height: 18px;
+      color: var(--link-color);
+    }
+    .font-color#id# {
+      color: var(--txt-color);
+    }
+  </style>
+</div>
